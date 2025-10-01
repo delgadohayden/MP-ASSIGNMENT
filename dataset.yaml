@@ -1,0 +1,4 @@
+train: D:\Herne\Documents\Classes\Engineering\Fourth Year\comp3007-main\comp3007-main\assignment\lastname_firstname_12345678\training
+test: D:\Herne\Documents\Classes\Engineering\Fourth Year\comp3007-main\comp3007-main\assignment\lastname_firstname_12345678\testing
+nc: 10
+names: ["0","1","2","3","4","5","6","7","8","9"]
