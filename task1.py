@@ -19,9 +19,9 @@
 import os
 import cv2 
 import numpy as np
-import matplotlib.pyplot as plt
-from skimage.measure import regionprops, label
-from skimage.color import label2rgb
+from ultralytics import YOLO
+
+model = YOLO("runs/detect/building_numbers3/weights/best.pt")
 
 def save_output(output_path, content, output_type='txt'):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -40,5 +40,29 @@ def save_output(output_path, content, output_type='txt'):
 
 def run_task1(image_path, config):
     # TODO: Implement task 1 here
+    img = cv2.imread(image_path)
+    
+    results = model(img, conf=0.5)
+    
+    boxes = results[0].boxes.xyxy.cpu().numpy()  # x1, y1, x2, y2
+    confidences = results[0].boxes.conf.cpu().numpy()
+
+    # If no boxes detected, skip
+    if len(boxes) == 0:
+        print(f"No building numbers detected in {image_path}")
+        return
+
+    # Prepare output folder
+    output_dir = "output/task1/"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Extract and save each detected building number
+    for idx, box in enumerate(boxes):
+        x1, y1, x2, y2 = map(int, box)
+        bn_img = img[y1:y2, x1:x2]  # crop the building number
+        bn_filename = os.path.join(output_dir, f"bn{idx+1}.png")
+        cv2.imwrite(bn_filename, bn_img)
+        print(f"✅ Saved {bn_filename}")
+        
     output_path = f"output/task1/result.txt"
     save_output(output_path, "Task 1 output", output_type='txt')
