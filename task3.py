@@ -13,8 +13,8 @@
 # limitations under the License.
 
 
-# Author: [Your Name]
-# Last Modified: 2024-09-09
+# Author: Hayden Delgado
+# Last Modified: 2025-03-10
 
 import os
 import cv2
@@ -37,64 +37,66 @@ def save_output(output_path, content, output_type='txt'):
     else:
         print("Unsupported output type. Use 'txt' or 'image'.")
 
-# CNN must match the training definition
+# CNN architecture for digit classification trained using dataset made from Task 2
 class DigitCNN(nn.Module):
     def __init__(self):
         super(DigitCNN, self).__init__()
+        
+        # Convolution layers: (channel, feature maps, kernel size, strides)
+        
+        # First convolution layer 
         self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        
+        # Second convolution layer
         self.conv2 = nn.Conv2d(32, 64, 3, 1)
-        self.fc1 = nn.Linear(9216, 128)
-        self.fc2 = nn.Linear(128, 10)
+        
+        # Fully connected layers
+        self.fc1 = nn.Linear(9216, 128) # Outputs 128 neurons
+        self.fc2 = nn.Linear(128, 10) # Outputs 10 neurons (digits 0-9)
 
+    # Forward pass
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2)
-        x = torch.flatten(x, 1)
-        x = F.relu(self.fc1(x))
+        x = F.relu(self.conv1(x)) # First convolution + ReLU activation
+        x = F.relu(self.conv2(x)) # Second convolution + ReLU activation
+        x = F.max_pool2d(x, 2) # Downsample using 2x2 max pooling
+        x = torch.flatten(x, 1) # Flatten feature maps into single vector (preserve batch size)
+        x = F.relu(self.fc1(x)) 
         x = self.fc2(x)
         return x
 
 # Load model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # Use GPU if available, otherwise use CPU
 model = DigitCNN().to(device)
-model.load_state_dict(torch.load("data/digit_cnn.pth", map_location=device))
+model.load_state_dict(torch.load("data/digit_cnn.pth", map_location=device)) # Load trained weights
 model.eval()
 
 # Preprocessing
 transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Grayscale(),
+    transforms.ToPILImage(),    # Convert numpy/OpenCV image to PIL format as required by torchvision transforms
+    transforms.Grayscale(),     # Convert to grayscale
     transforms.Resize((28, 28)),
     transforms.ToTensor(),
     transforms.Normalize((0.5,), (0.5,))
 ])
 
 def run_task3(image_path, config):
-    # Load image
+    
+    # Read in image in grayscale
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        print(f"⚠️ Could not read {image_path}")
-        return
 
     # Preprocess
     tensor_img = transform(img).unsqueeze(0).to(device)
 
     # Predict
-    with torch.no_grad():
+    with torch.no_grad(): # Disable gradient computation for faster inference
         output = model(tensor_img)
-        pred = output.argmax(dim=1, keepdim=True).item()
+        pred = output.argmax(dim=1, keepdim=True).item() # Take index of most likely digit
 
     # Save result
     filename = os.path.splitext(os.path.basename(image_path))[0]
     output_path = f"output/task3/{filename}.txt"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w") as f:
-        f.write(str(pred))
+        f.write(str(pred)) # Write predicted digit to text file
 
-    print(f"✅ {image_path} -> {output_path} (digit {pred})")
-
-# def run_task3(image_path, config):
-#     # TODO: Implement task 3 here
-#     output_path = f"output/task3/result.txt"
-#     save_output(output_path, "Task 3 output", output_type='txt')
+    print(f"(digit {pred}) Saved successfully.")

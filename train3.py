@@ -1,4 +1,3 @@
-# train3.py
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -7,7 +6,7 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 
-# 1. Define CNN model
+# Define CNN architecture 
 class DigitCNN(nn.Module):
     def __init__(self):
         super(DigitCNN, self).__init__()
@@ -25,7 +24,7 @@ class DigitCNN(nn.Module):
         x = self.fc2(x)
         return x
 
-# 2. Define transforms
+# Define transforms
 train_transform = transforms.Compose([
     transforms.Grayscale(),
     transforms.Resize((28,28)),
@@ -37,18 +36,18 @@ train_transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,))
 ])
 
-# 3. Load Task 3 dataset (Task 2 crops)
+# Train using generated dataset from Task2
 train_data_path = "./DatasetTask3/"  # folders 0-9
-train_dataset = ImageFolder(train_data_path, transform=train_transform)
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_dataset = ImageFolder(train_data_path, transform=train_transform) # Load images with labels from folder names
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True) # Batch and shuffle dataset
 
-# 4. Training setup
+# Setup training
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = DigitCNN().to(device)
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.001) # Adam optimizer with 0.001 learning rate
 criterion = nn.CrossEntropyLoss()
 
-# 5. Train loop
+# Train loop
 epochs = 20
 for epoch in range(epochs):
     model.train()
@@ -59,8 +58,8 @@ for epoch in range(epochs):
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
+    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}") # Print loss for current epoch (ChatGPT was used for this line)
 
-# 6. Save model
+# Save model
 torch.save(model.state_dict(), "digit_cnn.pth")
-print("Model saved to digit_cnn.pth")
+print("Model saved.")

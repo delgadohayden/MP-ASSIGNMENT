@@ -13,8 +13,8 @@
 # limitations under the License.
 
 
-# Author: [Your Name]
-# Last Modified: 2024-09-09
+# Author: Hayden Delgado
+# Last Modified: 2025-03-10
 
 import os
 import cv2
@@ -24,10 +24,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 
-# ---------------- TASK 1 MODEL ----------------
+# Load YOLO model used in Task 1
 task1_model = YOLO("data/building_numbers3/weights/best.pt")
 
-# ---------------- TASK 3 MODEL ----------------
+# Load CNN model used in Task 3
 class DigitCNN(nn.Module):
     def __init__(self):
         super(DigitCNN, self).__init__()
@@ -58,12 +58,8 @@ transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,))
 ])
 
-# ---------------- RUN TASK 4 ----------------
 def run_task4(image_path, config):
     img = cv2.imread(image_path)
-    if img is None:
-        print(f"⚠️ Could not read {image_path}")
-        return
 
     # Task 1: detect building number regions
     results = task1_model(img, conf=0.5)
@@ -73,27 +69,32 @@ def run_task4(image_path, config):
         # negative image → no output
         return
 
-    # Only handle first detected building number (can extend if multiple)
+    # Extract bounding box of building number
     x1, y1, x2, y2 = map(int, boxes[0])
     bn_img = img[y1:y2, x1:x2]
 
-    # Task 2: detect and crop individual digits using Task2 YOLO model
+    # Crop individual digits using Task2 YOLO model
     task2_model = YOLO("data/split_digits/weights/best.pt")
-    digit_results = task2_model(bn_img, conf=0.5)
-    digit_boxes = digit_results[0].boxes.xyxy.cpu().numpy()
+    digit_results = task2_model(bn_img, conf=0.5) # Execute Task 2 model on cropped image
+    digit_boxes = digit_results[0].boxes.xyxy.cpu().numpy() # Split and extract individual digits
     if len(digit_boxes) == 0:
         return  # No digits detected
 
     # Sort digits left to right
     digit_boxes = sorted(digit_boxes, key=lambda b: b[0])
 
-    building_number = ""
+    # Recognize digits using CNN
+    building_number = "" # String to store full number
     for box in digit_boxes:
+        
+        # Extract each digit's bounding box and crop
         x1d, y1d, x2d, y2d = map(int, box)
         digit_img = bn_img[y1d:y2d, x1d:x2d]
 
-        # Task 3: recognize digit
+        # Preprocess digit for CNN
         tensor_img = transform(digit_img).unsqueeze(0).to(device)
+        
+        # Execute CNN used in Task 3 and append predicted digit to string
         with torch.no_grad():
             output = task3_model(tensor_img)
             pred = output.argmax(dim=1).item()
@@ -105,6 +106,4 @@ def run_task4(image_path, config):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w") as f:
         f.write(building_number)
-
-    print(f"✅ {image_path} -> {output_path}: {building_number}")
 
