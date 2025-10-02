@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-model = YOLO("runs/detect/split_digits/weights/best.pt")
+model = YOLO("data/split_digits/weights/best.pt")
 
 
 def save_output(output_path, content, output_type='txt'):

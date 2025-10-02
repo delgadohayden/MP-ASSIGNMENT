@@ -58,7 +58,7 @@ class DigitCNN(nn.Module):
 # Load model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = DigitCNN().to(device)
-model.load_state_dict(torch.load("digit_cnn.pth", map_location=device))
+model.load_state_dict(torch.load("data/digit_cnn.pth", map_location=device))
 model.eval()
 
 # Preprocessing

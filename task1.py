@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-model = YOLO("runs/detect/building_numbers3/weights/best.pt")
+model = YOLO("data/building_numbers3/weights/best.pt")
 
 def save_output(output_path, content, output_type='txt'):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -45,7 +45,6 @@ def run_task1(image_path, config):
     results = model(img, conf=0.5)
     
     boxes = results[0].boxes.xyxy.cpu().numpy()  # x1, y1, x2, y2
-    confidences = results[0].boxes.conf.cpu().numpy()
 
     # If no boxes detected, skip
     if len(boxes) == 0:
@@ -57,12 +56,27 @@ def run_task1(image_path, config):
     os.makedirs(output_dir, exist_ok=True)
 
     # Extract and save each detected building number
-    for idx, box in enumerate(boxes):
-        x1, y1, x2, y2 = map(int, box)
-        bn_img = img[y1:y2, x1:x2]  # crop the building number
-        bn_filename = os.path.join(output_dir, f"bn{idx+1}.png")
-        cv2.imwrite(bn_filename, bn_img)
-        print(f"✅ Saved {bn_filename}")
+    if len(boxes) == 0:
+        print(f"No building numbers detected in {image_path}")
+
+    # Only take the first detected region (Task 1 expects a single bn file per image)
+    x1, y1, x2, y2 = map(int, boxes[0])
+    bn_img = img[y1:y2, x1:x2]
+
+    # Get input image index from filename
+    filename = os.path.basename(image_path)       # e.g., "img1.jpg"
+    index = ''.join(filter(str.isdigit, filename)) # "1"
+
+    bn_filename = os.path.join(output_dir, f"bn{index}.png")
+    cv2.imwrite(bn_filename, bn_img)
+    print(f"✅ Saved {bn_filename}")
+
+    # for idx, box in enumerate(boxes):
+    #     x1, y1, x2, y2 = map(int, box)
+    #     bn_img = img[y1:y2, x1:x2]  # crop the building number
+    #     bn_filename = os.path.join(output_dir, f"bn{idx+1}.png")
+    #     cv2.imwrite(bn_filename, bn_img)
+    #     print(f"✅ Saved {bn_filename}")
         
     output_path = f"output/task1/result.txt"
     save_output(output_path, "Task 1 output", output_type='txt')

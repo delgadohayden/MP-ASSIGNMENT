@@ -25,7 +25,7 @@ import torch.nn.functional as F
 import torchvision.transforms as transforms
 
 # ---------------- TASK 1 MODEL ----------------
-task1_model = YOLO("runs/detect/building_numbers3/weights/best.pt")
+task1_model = YOLO("data/building_numbers3/weights/best.pt")
 
 # ---------------- TASK 3 MODEL ----------------
 class DigitCNN(nn.Module):
@@ -47,7 +47,7 @@ class DigitCNN(nn.Module):
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 task3_model = DigitCNN().to(device)
-task3_model.load_state_dict(torch.load("digit_cnn.pth", map_location=device))
+task3_model.load_state_dict(torch.load("data/digit_cnn.pth", map_location=device))
 task3_model.eval()
 
 transform = transforms.Compose([
@@ -78,7 +78,7 @@ def run_task4(image_path, config):
     bn_img = img[y1:y2, x1:x2]
 
     # Task 2: detect and crop individual digits using Task2 YOLO model
-    task2_model = YOLO("runs/detect/split_digits/weights/best.pt")
+    task2_model = YOLO("data/split_digits/weights/best.pt")
     digit_results = task2_model(bn_img, conf=0.5)
     digit_boxes = digit_results[0].boxes.xyxy.cpu().numpy()
     if len(digit_boxes) == 0:
