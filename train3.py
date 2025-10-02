@@ -1,9 +1,10 @@
-# train_mnist.py
+# train3.py
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from torchvision import datasets, transforms
+from torchvision import transforms
+from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
 
 # 1. Define CNN model
@@ -26,32 +27,30 @@ class DigitCNN(nn.Module):
 
 # 2. Define transforms
 train_transform = transforms.Compose([
-    transforms.RandomRotation(20),                           # rotate up to ±20°
-    transforms.RandomAffine(degrees=15, shear=10, scale=(0.9, 1.1)), # skew, scale
-    transforms.RandomPerspective(distortion_scale=0.3, p=0.5),       # perspective warp
-    transforms.ColorJitter(brightness=0.2, contrast=0.2),             # simulate lighting
+    transforms.Grayscale(),
+    transforms.Resize((28,28)),
+    transforms.RandomRotation(20),
+    transforms.RandomAffine(degrees=15, shear=10, scale=(0.9,1.1)),
+    transforms.RandomPerspective(distortion_scale=0.3, p=0.5),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
     transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
+    transforms.Normalize((0.5,), (0.5,))
 ])
 
-test_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.1307,), (0.3081,))
-])
-
-# 3. Load MNIST dataset
-train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=train_transform)
-test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=test_transform)
-
+# 3. Load Task 3 dataset (Task 2 crops)
+train_data_path = "./DatasetTask3/"  # folders 0-9
+train_dataset = ImageFolder(train_data_path, transform=train_transform)
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=1000, shuffle=False)
 
-# 4. Train loop
+# 4. Training setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = DigitCNN().to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
-for epoch in range(20):  # 3 epochs for demo; increase for better accuracy
+
+# 5. Train loop
+epochs = 20
+for epoch in range(epochs):
     model.train()
     for data, target in train_loader:
         data, target = data.to(device), target.to(device)
@@ -60,8 +59,8 @@ for epoch in range(20):  # 3 epochs for demo; increase for better accuracy
         loss = criterion(output, target)
         loss.backward()
         optimizer.step()
-    print(f"Epoch {epoch+1}, Loss: {loss.item():.4f}")
+    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
 
-# 4. Save model
+# 6. Save model
 torch.save(model.state_dict(), "digit_cnn.pth")
 print("Model saved to digit_cnn.pth")
