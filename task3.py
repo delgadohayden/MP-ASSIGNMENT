@@ -19,7 +19,7 @@
 import os
 import cv2
 import torch
-import torch.nn as n
+import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 
@@ -94,7 +94,7 @@ def run_task3(image_path, config):
 
     print(f"✅ {image_path} -> {output_path} (digit {pred})")
 
-def run_task3(image_path, config):
-    # TODO: Implement task 3 here
-    output_path = f"output/task3/result.txt"
-    save_output(output_path, "Task 3 output", output_type='txt')
+# def run_task3(image_path, config):
+#     # TODO: Implement task 3 here
+#     output_path = f"output/task3/result.txt"
+#     save_output(output_path, "Task 3 output", output_type='txt')

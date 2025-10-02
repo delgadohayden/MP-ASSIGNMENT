@@ -1,20 +1,49 @@
 from ultralytics import YOLO
 import cv2
 import os
-import matplotlib.pyplot as plt
+from glob import glob
 
-model = YOLO("runs/detect/building_numbers3/weights/best.pt")
+# Load your trained YOLOv8 model
+model = YOLO("runs/detect/split_digits/weights/best.pt")
 
-img = cv2.imread("Dataset/valid/images/280FE49C-63BC-47F6-A047-A12627771931_jpg.rf.fe78771b2e660fd327ad4f5efa6dd32e.jpg")
+# Input and output folders
+input_folder = "DatasetTask2/train/images/"
+output_folder = "DatasetTask3/"
+os.makedirs(output_folder, exist_ok=True)
 
-results = model(img, conf=0.5)
-    
-boxes = results[0].boxes.xyxy.cpu().numpy()  # x1, y1, x2, y2
-confidences = results[0].boxes.conf.cpu().numpy()
+counter = 1
+max_images = 50  # only process the first 100 images
 
-if len(results[0].boxes) == 0:
-    print("No building numbers detected.")
-else:
-   cv2.imwrite("output.png", results[0].plot(line_width=2))
+# Get all image filenames
+all_images = [f for f in os.listdir(input_folder) if f.lower().endswith((".png", ".jpg"))]
 
-print("Saved output.png with detections")
+# Loop through only the first max_images files
+for filename in all_images[:max_images]:
+    img_path = os.path.join(input_folder, filename)
+    img = cv2.imread(img_path)
+    if img is None:
+        print(f"⚠️ Could not read {img_path}")
+        continue
+
+    # Run YOLO
+    results = model(img, conf=0.5)
+    boxes = results[0].boxes.xyxy.cpu().numpy()
+
+    if len(boxes) == 0:
+        print(f"No digits detected in {img_path}")
+        continue
+
+    # Sort boxes left-to-right
+    boxes = sorted(boxes, key=lambda b: b[0])
+
+    # Save each digit as c0001.png, c0002.png, ...
+    for idx, box in enumerate(boxes):
+        x1, y1, x2, y2 = map(int, box)
+        digit_img = img[y1:y2, x1:x2]
+        crop_filename = os.path.join(output_folder, f"c{counter:04d}.png")
+        cv2.imwrite(crop_filename, digit_img)
+        counter += 1
+
+    print(f"Processed {img_path}, total crops saved: {counter-1}")
+
+print(f"✅ Finished! Total digits saved: {counter-1}")
