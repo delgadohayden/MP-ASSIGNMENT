@@ -81,22 +81,43 @@ transform = transforms.Compose([
 
 def run_task3(image_path, config):
     
-    # Read in image in grayscale
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    # Determine if input is a folder
+    if os.path.isdir(image_path):
+        bn_folders = [os.path.join(image_path, f) for f in os.listdir(image_path)
+                  if os.path.isdir(os.path.join(image_path, f))]
 
-    # Preprocess
-    tensor_img = transform(img).unsqueeze(0).to(device)
+    for bn_folder in bn_folders:
+        try:
+        # Loop through images in each subfolder
+            image_files = [os.path.join(bn_folder, f)
+                        for f in os.listdir(bn_folder)
+                        if f.lower().endswith(".png")]
 
-    # Predict
-    with torch.no_grad(): # Disable gradient computation for faster inference
-        output = model(tensor_img)
-        pred = output.argmax(dim=1, keepdim=True).item() # Take index of most likely digit
+            for img_path in image_files:
+                # Read in image (grayscale)
+                img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+                if img is None:
+                    print(f"⚠️ Could not read {img_path}")
+                    continue
 
-    # Save result
-    filename = os.path.splitext(os.path.basename(image_path))[0]
-    output_path = f"output/task3/{filename}.txt"
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w") as f:
-        f.write(str(pred)) # Write predicted digit to text file
+                # Preprocess and predict
+                tensor_img = transform(img).unsqueeze(0).to(device)
+                with torch.no_grad():
+                    output = model(tensor_img)
+                    pred = output.argmax(dim=1, keepdim=True).item()
 
-    print(f"(digit {pred}) Saved successfully.")
+                # Prepare output folder: output/task3/bnX
+                bn_name = os.path.basename(bn_folder)  # bn1, bn2, ...
+                output_dir = os.path.join("output/task3", bn_name)
+                os.makedirs(output_dir, exist_ok=True)
+
+                # Save prediction as txt
+                base_name = os.path.splitext(os.path.basename(img_path))[0]  
+                txt_filename = os.path.join(output_dir, f"{base_name}.txt")
+                with open(txt_filename, "w") as f:
+                    f.write(str(pred))
+
+                print(f"Saved {txt_filename} (digit {pred})")
+
+        except Exception as e:
+            print(f"Error processing: {e}")

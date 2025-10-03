@@ -59,51 +59,69 @@ transform = transforms.Compose([
 ])
 
 def run_task4(image_path, config):
-    img = cv2.imread(image_path)
-
-    # Task 1: detect building number regions
-    results = task1_model(img, conf=0.5)
-    boxes = results[0].boxes.xyxy.cpu().numpy()
-
-    if len(boxes) == 0:
-        # negative image → no output
-        return
-
-    # Extract bounding box of building number
-    x1, y1, x2, y2 = map(int, boxes[0])
-    bn_img = img[y1:y2, x1:x2]
-
-    # Crop individual digits using Task2 YOLO model
-    task2_model = YOLO("data/split_digits/weights/best.pt")
-    digit_results = task2_model(bn_img, conf=0.5) # Execute Task 2 model on cropped image
-    digit_boxes = digit_results[0].boxes.xyxy.cpu().numpy() # Split and extract individual digits
-    if len(digit_boxes) == 0:
-        return  # No digits detected
-
-    # Sort digits left to right
-    digit_boxes = sorted(digit_boxes, key=lambda b: b[0])
-
-    # Recognize digits using CNN
-    building_number = "" # String to store full number
-    for box in digit_boxes:
+    
+    # Check if output folder exists
+    output_dir = "output/task4/"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Loop through all images in input folder
+    if os.path.isdir(image_path):
+        image_files = [os.path.join(image_path, f) 
+                       for f in os.listdir(image_path) 
+                       if f.lower().endswith((".jpg", ".jpeg", ".png"))]
         
-        # Extract each digit's bounding box and crop
-        x1d, y1d, x2d, y2d = map(int, box)
-        digit_img = bn_img[y1d:y2d, x1d:x2d]
+    for img_path in image_files:
+        try:
+    
+            # Read in image
+            img = cv2.imread(img_path)
 
-        # Preprocess digit for CNN
-        tensor_img = transform(digit_img).unsqueeze(0).to(device)
+            # Task 1: detect building number regions
+            results = task1_model(img, conf=0.5)
+            boxes = results[0].boxes.xyxy.cpu().numpy()
+
+            if len(boxes) == 0:
+                # negative image
+                continue
+
+            # Extract bounding box of building number
+            x1, y1, x2, y2 = map(int, boxes[0])
+            bn_img = img[y1:y2, x1:x2]
+
+            # Crop individual digits using Task2 YOLO model
+            task2_model = YOLO("data/split_digits/weights/best.pt")
+            digit_results = task2_model(bn_img, conf=0.5) # Execute Task 2 model on cropped image
+            digit_boxes = digit_results[0].boxes.xyxy.cpu().numpy() # Split and extract individual digits
+            if len(digit_boxes) == 0:
+                continue  # No digits detected
+
+            # Sort digits left to right
+            digit_boxes = sorted(digit_boxes, key=lambda b: b[0])
+
+            # Recognize digits using CNN
+            building_number = "" # String to store full number
+            for box in digit_boxes:
+                
+                # Extract each digit's bounding box and crop
+                x1d, y1d, x2d, y2d = map(int, box)
+                digit_img = bn_img[y1d:y2d, x1d:x2d]
+
+                # Preprocess digit for CNN
+                tensor_img = transform(digit_img).unsqueeze(0).to(device)
+                
+                # Execute CNN used in Task 3 and append predicted digit to string
+                with torch.no_grad():
+                    output = task3_model(tensor_img)
+                    pred = output.argmax(dim=1).item()
+                    building_number += str(pred)
+
+            # Save the building number
+            filename = os.path.splitext(os.path.basename(img_path))[0]
+            output_path = os.path.join(output_dir, f"{filename}.txt")
+            with open(output_path, "w") as f:
+                f.write(building_number)
         
-        # Execute CNN used in Task 3 and append predicted digit to string
-        with torch.no_grad():
-            output = task3_model(tensor_img)
-            pred = output.argmax(dim=1).item()
-            building_number += str(pred)
-
-    # Save the building number
-    filename = os.path.splitext(os.path.basename(image_path))[0]
-    output_path = f"output/task4/{filename}.txt"
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w") as f:
-        f.write(building_number)
+        except Exception as e:
+            print(f"Error processing: {e}")
+            
 

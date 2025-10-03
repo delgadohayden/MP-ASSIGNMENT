@@ -1,8 +1,8 @@
 
 # Student Information
-Surname: Trump
-GivenNames: Donald
-StudentID: 12345678
+Surname: Delgado
+GivenNames: Hayden
+StudentID: 20595942
 
 # Hyperparameters
 learning_rate: 0.001

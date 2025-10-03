@@ -40,34 +40,53 @@ def save_output(output_path, content, output_type='txt'):
 
 
 def run_task2(image_path, config):
-    
-    # Read in image
-    img = cv2.imread(image_path)
+    # Loop through all images in input folder
+    if os.path.isdir(image_path):
+        image_files = [os.path.join(image_path, f)
+                       for f in os.listdir(image_path)
+                       if f.lower().endswith((".jpg", ".jpeg", ".png"))]
+    else:
+        image_files = [image_path] # Pass through single image
 
-    # Set confidence threshold to 0.5
-    # to filter out false positives (detections falling below 50%)
-    results = model(img, conf=0.5)
+    for img_path in image_files:
+        try:
+            # Read in image
+            img = cv2.imread(img_path)
+            if img is None:
+                print(f"⚠️ Could not read {img_path}")
+                continue
 
-    # Extract detected bounding boxes as numpy array
-    # x1, y1, x2, y2 format
-    boxes = results[0].boxes.xyxy.cpu().numpy()  # x1, y1, x2, y2
+            # Run detection with confidence threshold of 0.5
+            # (filters out detections with <50% confidence)
+            results = model(img, conf=0.5)
 
-    # Extract and save each detected building number
-    if len(boxes) == 0:
-        print(f"No building numbers detected")
+            # Extract detected bounding boxes as numpy array
+            # Format: [x1, y1, x2, y2]
+            boxes = results[0].boxes.xyxy.cpu().numpy()
 
-    # Prepare output folder
-    output_dir = "output/task2/"
-    os.makedirs(output_dir, exist_ok=True)
+            # Negative input
+            if len(boxes) == 0:
+                print(f"No characters detected in {os.path.basename(img_path)}")
+                continue
 
-    # Sort detection boxes by leftmost x coordinate
-    # Ensures left-to-right order
-    boxes = sorted(boxes, key=lambda b: b[0])
+            # Sort detection boxes by leftmost x coordinate
+            # Ensures characters are saved left-to-right
+            boxes = sorted(boxes, key=lambda b: b[0])
 
-    # Loop through all bounding boxes with index
-    for idx, box in enumerate(boxes):
-        x1, y1, x2, y2 = map(int, box) # Convert floating point coordinates to integers
-        char_img = img[y1:y2, x1:x2]  # Crop digit character from image
-        char_filename = os.path.join(output_dir, f"c{idx+1}.png")
-        cv2.imwrite(char_filename, char_img)
-        print(f"Image saved successfully.")
+            # Save input images to their corresponding output folder
+            filename = os.path.basename(img_path)
+            base_name = os.path.splitext(filename)[0]
+            output_dir = os.path.join("output/task2", base_name)  # Save inside bnX folder
+
+            # Loop through each detected character
+            for idx, box in enumerate(boxes):
+                x1, y1, x2, y2 = map(int, box)
+                char_img = img[y1:y2, x1:x2]
+
+                char_filename = os.path.join(output_dir, f"c{idx+1}.png")
+                cv2.imwrite(char_filename, char_img)
+                print(f"Successfully saved {char_filename}")
+
+        except Exception as e:
+            # Catch unexpected errors so loop continues
+            print(f"Error processing {img_path}: {e}")
